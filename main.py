@@ -18,13 +18,16 @@ def create_race(race_info: dict[str, Any]) -> Race:
     return race
 
 
-def create_skills(skills_info: dict[str, Any], race: Race) -> None:
-    print(skills_info)
-    for skill in skills_info:
-        Skill.objects.get_or_create(
-            name=skill["name"],
-            bonus=skill["bonus"],
-            race=race)
+def create_skills(skills_info: list[dict[str, Any]], race: Race) -> None:
+    if skills_info:  # Проверка на None
+        for skill in skills_info:
+            skill_name = skill.get("name")
+            skill_bonus = skill.get("bonus")
+            if skill_name and skill_bonus:
+                Skill.objects.get_or_create(
+                    name=skill_name,
+                    bonus=skill_bonus,
+                    race=race)
 
 
 def create_guild(guild_info: Optional[dict[str, Any]]) -> Optional[Guild]:
@@ -38,13 +41,15 @@ def create_guild(guild_info: Optional[dict[str, Any]]) -> Optional[Guild]:
 
 
 def create_player(
-        player: str,
+        nickname: str,
         player_info: dict[str, Any],
-        race: Race,
-        guild: Optional[Guild]
 ) -> None:
+    race = create_race(player_info.get("race"))
+    create_skills(player_info.get("race").get("skills", []), race)
+    guild = create_guild(player_info.get("guild"))
+
     Player.objects.get_or_create(
-        nickname=player,
+        nickname=nickname,
         defaults={
             'email': player_info['email'],
             'bio': player_info['bio'],
@@ -56,11 +61,9 @@ def create_player(
 
 def main() -> None:
     players = load_players_from_file()
-    for player, player_info in players.items():
-        race = create_race(player_info.get("race"))
-        create_skills(player_info.get("race").get("skills"), race)
-        guild = create_guild(player_info.get("guild"))
-        create_player(player, player_info, race, guild)
+
+    for nickname, player_info in players.items():
+        create_player(nickname, player_info)
 
 
 if __name__ == "__main__":
